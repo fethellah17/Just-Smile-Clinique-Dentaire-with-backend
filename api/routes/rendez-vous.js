@@ -19,12 +19,14 @@ async function executeWithRetry(dbOperation, maxRetries = 3, delayMs = 100) {
   }
 }
 
-// GET all rendez-vous (non-archived by default)
+// GET all rendez-vous (ONLY non-archived, archived = 0)
 router.get('/', async (req, res) => {
   try {
     const db = await getDb();
     
-    // Default: return only non-archived appointments (archived = 0)
+    console.log('📋 Fetching ACTIVE appointments (archived = 0)');
+    
+    // STRICT: return only non-archived appointments (archived = 0)
     const rendezVous = await db.all(
       'SELECT * FROM rendez_vous WHERE archived = 0 ORDER BY date ASC, heure ASC'
     );
@@ -44,6 +46,7 @@ router.get('/', async (req, res) => {
       archived: rdv.archived === 1
     }));
     
+    console.log(`✅ Returned ${result.length} active appointments`);
     res.json(result);
   } catch (error) {
     console.error('Error fetching rendez-vous:', error);
@@ -51,11 +54,14 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET history - archived appointments only (MUST be before /:id route)
+// GET history - ONLY archived appointments (archived = 1) - MUST be before /:id route
 router.get('/history', async (req, res) => {
   try {
     const db = await getDb();
     
+    console.log('📚 Fetching ARCHIVED appointments (archived = 1)');
+    
+    // STRICT: return only archived appointments (archived = 1)
     const rendezVous = await db.all(
       'SELECT * FROM rendez_vous WHERE archived = 1 ORDER BY date DESC, heure DESC'
     );
@@ -75,6 +81,7 @@ router.get('/history', async (req, res) => {
       archived: rdv.archived === 1
     }));
     
+    console.log(`✅ Returned ${result.length} archived appointments`);
     res.json(result);
   } catch (error) {
     console.error('Error fetching history:', error);

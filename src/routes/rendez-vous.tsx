@@ -77,23 +77,14 @@ function RendezVousPage() {
   const [appointmentToConvert, setAppointmentToConvert] = useState<RendezVous | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   
-  // Persist showArchive state in localStorage
-  const [showArchive, setShowArchive] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('showArchive');
-      return saved === 'true';
-    }
-    return false;
-  });
+  // Toggle archive view (no localStorage - pure UI state)
+  const [showArchive, setShowArchive] = useState(false);
   
   const [prefilledDate, setPrefilledDate] = useState<string | undefined>(undefined);
 
   // Save showArchive state to localStorage whenever it changes
   const handleToggleArchive = (show: boolean) => {
     setShowArchive(show);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('showArchive', String(show));
-    }
   };
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -126,8 +117,10 @@ function RendezVousPage() {
 
   const handleArchiveDate = async (date: string) => {
     try {
+      // Archive on backend and refetch fresh data
       await archiveByDate(date);
       showToast("Journée archivée avec succès");
+      // Automatically show archive after archiving
       handleToggleArchive(true);
     } catch (error) {
       console.error('Failed to archive date:', error);

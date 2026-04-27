@@ -78,10 +78,11 @@ export const patientApi = {
 
 // Rendez-vous API functions
 export const rendezVousApi = {
-  getAll: (archived?: boolean) => {
-    const params = archived !== undefined ? `?archived=${archived}` : '';
-    return apiFetch<any[]>(`/rendez-vous${params}`);
-  },
+  // Get active appointments (archived = 0)
+  getAll: () => apiFetch<any[]>('/rendez-vous'),
+  
+  // Get archived appointments (archived = 1)
+  getHistory: () => apiFetch<any[]>('/rendez-vous/history'),
   
   getById: (id: string) => apiFetch<any>(`/rendez-vous/${id}`),
   

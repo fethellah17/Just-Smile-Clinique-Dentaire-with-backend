@@ -83,11 +83,16 @@ export function DataProvider({ children }: { children: ReactNode}) {
         const patientsData = await patientApi.getAll();
         setPatients(patientsData || []);
 
-        // Fetch ALL rendez-vous (both active and archived)
+        // Fetch ALL rendez-vous (both active and archived) using correct endpoints
         const [activeRdv, archivedRdv] = await Promise.all([
-          rendezVousApi.getAll(false), // Active appointments
-          rendezVousApi.getAll(true),  // Archived appointments
+          rendezVousApi.getAll(),      // GET /api/rendez-vous (archived = 0)
+          rendezVousApi.getHistory(),  // GET /api/rendez-vous/history (archived = 1)
         ]);
+        
+        console.log('📊 Fetched appointments:', {
+          active: activeRdv?.length || 0,
+          archived: archivedRdv?.length || 0
+        });
         
         // Combine both active and archived appointments and remove duplicates by ID
         const allAppointments = [...(activeRdv || []), ...(archivedRdv || [])];
@@ -248,16 +253,32 @@ export function DataProvider({ children }: { children: ReactNode}) {
 
   const archiveRendezVousByDate = async (date: string) => {
     try {
+      console.log('📦 Archiving appointments for date:', date);
+      
+      // Call backend to archive
       await rendezVousApi.archiveByDate(date);
       
-      // Update local state to reflect the archived appointments
-      // Only archive appointments that are confirmed or cancelled (not pending)
-      setRendezVous((rendezVous ?? []).map(r => {
-        if (r.date === date && !r.archived && (r.statut === 'confirmé' || r.statut === 'annulé')) {
-          return { ...r, archived: true };
-        }
-        return r;
-      }));
+      console.log('✅ Archive successful, refetching data from server...');
+      
+      // CRITICAL: Refetch from server to get the true state
+      const [activeRdv, archivedRdv] = await Promise.all([
+        rendezVousApi.getAll(),      // GET /api/rendez-vous (archived = 0)
+        rendezVousApi.getHistory(),  // GET /api/rendez-vous/history (archived = 1)
+      ]);
+      
+      // Combine and update state with fresh data from server
+      const allAppointments = [...(activeRdv || []), ...(archivedRdv || [])];
+      const uniqueAppointments = allAppointments.filter((rdv, index, self) =>
+        index === self.findIndex((r) => r.id === rdv.id)
+      );
+      
+      console.log('📊 Refetched appointments:', {
+        active: activeRdv?.length || 0,
+        archived: archivedRdv?.length || 0,
+        total: uniqueAppointments.length
+      });
+      
+      setRendezVous(uniqueAppointments);
     } catch (error) {
       console.error('Failed to archive rendez-vous:', error);
       throw error;
