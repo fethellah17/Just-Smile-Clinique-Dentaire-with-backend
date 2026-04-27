@@ -57,7 +57,7 @@ export function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="dr.souidi@justsmile.dz"
+                placeholder="Ex: dr.souidi@justsmile.dz"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400"
@@ -98,10 +98,6 @@ export function LoginPage() {
                 Mot de passe oublié ?
               </button>
             </div>
-
-            <p className="text-xs text-slate-500 text-center mt-4">
-              Démo : dr.souidi@justsmile.dz / admin123
-            </p>
           </form>
         </CardContent>
       </Card>
