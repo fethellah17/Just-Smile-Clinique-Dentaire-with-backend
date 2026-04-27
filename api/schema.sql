@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS passages_directs (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Users table for authentication
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_category_types_category ON category_types(category_id);
 CREATE INDEX IF NOT EXISTS idx_type_steps_type ON type_steps(type_id);

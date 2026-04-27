@@ -349,6 +349,17 @@ async function initializeDatabase() {
 
     console.log('✓ Database seeded with initial categories data');
     
+    // Create default user account
+    const bcrypt = require('bcrypt');
+    const defaultPassword = await bcrypt.hash('admin123', 10);
+    
+    await db.run(
+      'INSERT INTO users (id, email, password, name) VALUES (?, ?, ?, ?)',
+      ['user-1', 'dr.souidi@justsmile.dz', defaultPassword, 'Dr. Souidi']
+    );
+    
+    console.log('✓ Default user account created (dr.souidi@justsmile.dz / admin123)');
+    
     await db.close();
     console.log('✓ Database initialized successfully!');
 

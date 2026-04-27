@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { authApi } from "@/lib/api";
 
 interface ChangePasswordModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const PASSWORD_STORAGE_KEY = "user_password";
-const DEFAULT_PASSWORD = "admin123";
+const USER_EMAIL = "dr.souidi@justsmile.dz";
 
 export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalProps) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -19,45 +19,41 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Get stored password or use default
-    const storedPassword = localStorage.getItem(PASSWORD_STORAGE_KEY) || DEFAULT_PASSWORD;
+    try {
+      // Validate new password and confirmation match
+      if (newPassword !== confirmPassword) {
+        toast.error("Les nouveaux mots de passe ne correspondent pas");
+        setLoading(false);
+        return;
+      }
 
-    // Validate current password
-    if (currentPassword !== storedPassword) {
-      toast.error("Le mot de passe actuel est incorrect");
+      // Validate new password is not empty
+      if (newPassword.trim().length < 6) {
+        toast.error("Le nouveau mot de passe doit contenir au moins 6 caractères");
+        setLoading(false);
+        return;
+      }
+
+      // Call backend API to update password
+      await authApi.updatePassword(USER_EMAIL, currentPassword, newPassword);
+      
+      toast.success("Mot de passe modifié avec succès");
+      
+      // Reset form and close modal
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
       setLoading(false);
-      return;
-    }
-
-    // Validate new password and confirmation match
-    if (newPassword !== confirmPassword) {
-      toast.error("Les nouveaux mots de passe ne correspondent pas");
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Password update error:', error);
+      toast.error(error.message || "Erreur lors de la modification du mot de passe");
       setLoading(false);
-      return;
     }
-
-    // Validate new password is not empty
-    if (newPassword.trim().length < 6) {
-      toast.error("Le nouveau mot de passe doit contenir au moins 6 caractères");
-      setLoading(false);
-      return;
-    }
-
-    // Save new password to localStorage
-    localStorage.setItem(PASSWORD_STORAGE_KEY, newPassword);
-    
-    toast.success("Mot de passe modifié avec succès");
-    
-    // Reset form and close modal
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setLoading(false);
-    onOpenChange(false);
   };
 
   const handleClose = () => {

@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { authApi } from "./api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isInitialized: boolean;
 }
@@ -10,8 +11,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const SESSION_KEY = "just-smile-session-token";
-const PASSWORD_STORAGE_KEY = "user_password";
-const DEFAULT_PASSWORD = "admin123";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,21 +25,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsInitialized(true);
   }, []);
 
-  const login = (email: string, password: string) => {
-    // Get password from localStorage or use default
-    const storedPassword = typeof window !== "undefined" 
-      ? localStorage.getItem(PASSWORD_STORAGE_KEY) || DEFAULT_PASSWORD
-      : DEFAULT_PASSWORD;
-
-    // Demo credentials - will be replaced by Supabase Auth
-    if (email === "dr.souidi@justsmile.dz" && password === storedPassword) {
-      setIsAuthenticated(true);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem(SESSION_KEY, "authenticated");
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await authApi.login(email, password);
+      
+      if (response.success) {
+        setIsAuthenticated(true);
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(SESSION_KEY, "authenticated");
+        }
+        return true;
       }
-      return true;
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {

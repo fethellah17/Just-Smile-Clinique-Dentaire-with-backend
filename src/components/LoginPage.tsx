@@ -14,23 +14,21 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
 
-  // Get current password for demo hint
-  const currentPassword = typeof window !== "undefined" 
-    ? localStorage.getItem("user_password") || "admin123"
-    : "admin123";
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    setTimeout(() => {
-      const success = login(email, password);
+    try {
+      const success = await login(email, password);
       if (!success) {
         setError("Email ou mot de passe incorrect");
       }
+    } catch (err) {
+      setError("Erreur de connexion. Vérifiez que le serveur est démarré.");
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -102,7 +100,7 @@ export function LoginPage() {
             </div>
 
             <p className="text-xs text-slate-500 text-center mt-4">
-              Démo : dr.souidi@justsmile.dz / {currentPassword}
+              Démo : dr.souidi@justsmile.dz / admin123
             </p>
           </form>
         </CardContent>

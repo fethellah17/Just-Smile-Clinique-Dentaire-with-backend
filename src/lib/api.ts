@@ -113,6 +113,27 @@ export const rendezVousApi = {
   }>('/rendez-vous/stats/dashboard'),
 };
 
+// Passages Directs API functions
+export const passageDirectApi = {
+  getAll: () => apiFetch<any[]>('/passages-directs'),
+  
+  getById: (id: string) => apiFetch<any>(`/passages-directs/${id}`),
+  
+  create: (passage: any) => apiFetch<any>('/passages-directs', {
+    method: 'POST',
+    body: JSON.stringify(passage),
+  }),
+  
+  update: (id: string, updates: any) => apiFetch<any>(`/passages-directs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  }),
+  
+  delete: (id: string) => apiFetch<{ message: string }>(`/passages-directs/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
 // Check if API is online
 export async function checkApiHealth(): Promise<boolean> {
   try {
@@ -122,3 +143,23 @@ export async function checkApiHealth(): Promise<boolean> {
     return false;
   }
 }
+
+// Auth API functions
+export const authApi = {
+  login: (email: string, password: string) => apiFetch<{ success: boolean; user: any }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  }),
+  
+  updatePassword: (email: string, oldPassword: string, newPassword: string) => 
+    apiFetch<{ success: boolean; message: string }>('/auth/update-password', {
+      method: 'PUT',
+      body: JSON.stringify({ email, oldPassword, newPassword }),
+    }),
+  
+  resetPassword: (email: string, recoveryCode: string) => 
+    apiFetch<{ success: boolean; message: string; defaultPassword: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, recoveryCode }),
+    }),
+};

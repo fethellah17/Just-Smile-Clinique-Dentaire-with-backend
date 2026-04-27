@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Patient, RendezVous, Acte, Category, PaymentRecord, PassageDirect } from "@/lib/mock-data";
-import { actes as initialActes, passagesDirects as initialPassagesDirects } from "@/lib/mock-data";
-import { categoryApi, patientApi, rendezVousApi, checkApiHealth } from "@/lib/api";
+import { actes as initialActes } from "@/lib/mock-data";
+import { categoryApi, patientApi, rendezVousApi, passageDirectApi, checkApiHealth } from "@/lib/api";
 
 interface DataContextType {
   patients: Patient[];
@@ -28,9 +28,9 @@ interface DataContextType {
   archiveRendezVousByDate: (date: string) => void;
   
   // PassageDirect operations
-  addPassageDirect: (passage: Omit<PassageDirect, "id">) => PassageDirect;
-  updatePassageDirect: (id: string, updates: Partial<PassageDirect>) => void;
-  deletePassageDirect: (id: string) => void;
+  addPassageDirect: (passage: Omit<PassageDirect, "id">) => Promise<PassageDirect>;
+  updatePassageDirect: (id: string, updates: Partial<PassageDirect>) => Promise<void>;
+  deletePassageDirect: (id: string) => Promise<void>;
   
   // Acte operations
   addActe: (acte: Omit<Acte, "id" | "resteAPayer">) => Acte;
@@ -49,7 +49,7 @@ export function DataProvider({ children }: { children: ReactNode}) {
   // State
   const [patients, setPatients] = useState<Patient[]>([]);
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
-  const [passagesDirects, setPassagesDirects] = useState<PassageDirect[]>(initialPassagesDirects ?? []);
+  const [passagesDirects, setPassagesDirects] = useState<PassageDirect[]>([]);
   const [actes, setActes] = useState<Acte[]>(initialActes ?? []);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -102,6 +102,11 @@ export function DataProvider({ children }: { children: ReactNode}) {
         
         setRendezVous(uniqueAppointments);
 
+        // Fetch passages directs
+        const passagesData = await passageDirectApi.getAll();
+        setPassagesDirects(passagesData || []);
+        console.log('📊 Fetched passages directs:', passagesData?.length || 0);
+
         setApiError(null);
         setIsLoaded(true);
       } catch (error) {
@@ -118,18 +123,6 @@ export function DataProvider({ children }: { children: ReactNode}) {
 
     fetchData();
   }, []);
-
-  // Auto-clear passages directs when all are processed
-  useEffect(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const todayPassages = (passagesDirects || []).filter((p) => p.date === todayStr);
-    const pendingPassages = todayPassages.filter((p) => p.statut === "en attente");
-    
-    // If there are passages today but none pending, clear all today's passages
-    if (todayPassages.length > 0 && pendingPassages.length === 0) {
-      setPassagesDirects((prev) => (prev || []).filter((p) => p.date !== todayStr));
-    }
-  }, [passagesDirects]);
 
   // Patient operations
   const addPatient = async (patient: Omit<Patient, "id" | "dateCreation">) => {
@@ -286,21 +279,41 @@ export function DataProvider({ children }: { children: ReactNode}) {
   };
 
   // PassageDirect operations
-  const addPassageDirect = (passage: Omit<PassageDirect, "id">) => {
-    const newPassage: PassageDirect = {
-      ...passage,
-      id: String(Math.max(...(passagesDirects?.map(p => parseInt(p.id)) ?? [0]), 0) + 1),
-    };
-    setPassagesDirects([...(passagesDirects ?? []), newPassage]);
-    return newPassage;
+  const addPassageDirect = async (passage: Omit<PassageDirect, "id">) => {
+    try {
+      const newPassage = await passageDirectApi.create(passage);
+      
+      // Check if passage already exists in state (prevent ghost duplicates)
+      const exists = passagesDirects.some(p => p.id === newPassage.id);
+      if (!exists) {
+        setPassagesDirects([...(passagesDirects || []), newPassage]);
+      }
+      
+      return newPassage;
+    } catch (error) {
+      console.error('Failed to add passage direct:', error);
+      throw error;
+    }
   };
 
-  const updatePassageDirect = (id: string, updates: Partial<PassageDirect>) => {
-    setPassagesDirects((passagesDirects ?? []).map(p => p.id === id ? { ...p, ...updates } : p));
+  const updatePassageDirect = async (id: string, updates: Partial<PassageDirect>) => {
+    try {
+      const updated = await passageDirectApi.update(id, updates);
+      setPassagesDirects((passagesDirects || []).map(p => p.id === id ? updated : p));
+    } catch (error) {
+      console.error('Failed to update passage direct:', error);
+      throw error;
+    }
   };
 
-  const deletePassageDirect = (id: string) => {
-    setPassagesDirects((passagesDirects ?? []).filter(p => p.id !== id));
+  const deletePassageDirect = async (id: string) => {
+    try {
+      await passageDirectApi.delete(id);
+      setPassagesDirects((passagesDirects || []).filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Failed to delete passage direct:', error);
+      throw error;
+    }
   };
 
   // Acte operations

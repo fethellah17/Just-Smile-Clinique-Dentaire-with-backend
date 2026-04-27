@@ -5,37 +5,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { AlertCircle } from "lucide-react";
+import { authApi } from "@/lib/api";
 
 interface PasswordRecoveryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const PASSWORD_STORAGE_KEY = "user_password";
-const DEFAULT_PASSWORD = "admin123";
+const USER_EMAIL = "dr.souidi@justsmile.dz";
 const MASTER_RECOVERY_CODE = "JUST-SMILE-2026";
 
 export function PasswordRecoveryModal({ open, onOpenChange }: PasswordRecoveryModalProps) {
   const [recoveryCode, setRecoveryCode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Validate recovery code
-    if (recoveryCode.trim().toUpperCase() === MASTER_RECOVERY_CODE) {
-      // Reset password to default
-      localStorage.setItem(PASSWORD_STORAGE_KEY, DEFAULT_PASSWORD);
+    try {
+      // Validate recovery code
+      if (recoveryCode.trim().toUpperCase() !== MASTER_RECOVERY_CODE) {
+        toast.error("Code de récupération incorrect");
+        setLoading(false);
+        return;
+      }
+
+      // Call backend API to reset password
+      const response = await authApi.resetPassword(USER_EMAIL, recoveryCode);
       
-      toast.success("Mot de passe réinitialisé à 'admin123'. Vous pouvez maintenant vous connecter.");
+      toast.success(`Mot de passe réinitialisé à '${response.defaultPassword}'. Vous pouvez maintenant vous connecter.`);
       
       // Reset form and close modal
       setRecoveryCode("");
       setLoading(false);
       onOpenChange(false);
-    } else {
-      toast.error("Code de récupération incorrect");
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast.error(error.message || "Erreur lors de la réinitialisation du mot de passe");
       setLoading(false);
     }
   };

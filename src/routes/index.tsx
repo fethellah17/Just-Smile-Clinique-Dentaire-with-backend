@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/auth-context";
 import { LoginPage } from "@/components/LoginPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Users, Clock, CheckCircle2, XCircle, Archive } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { usePatients } from "@/hooks/use-patients";
@@ -47,7 +46,7 @@ function Index() {
 
   const { patients, addPatient } = usePatients();
   const { rendezVous, addRendezVous, updateRendezVous, archiveByDate } = useRendezVous();
-  const { passagesDirects, addPassageDirect, updatePassageDirect } = usePassageDirect();
+  const { passagesDirects, addPassageDirect, deletePassageDirect } = usePassageDirect();
   const { categories } = useCategories();
   const [newPatientOpen, setNewPatientOpen] = useState(false);
   const [newRdvOpen, setNewRdvOpen] = useState(false);
@@ -64,36 +63,56 @@ function Index() {
   // Check if there are any "en attente" appointments today
   const hasEnAttenteToday = todayRDV.some((rdv) => rdv.statut === "en attente");
 
-  const handleConfirmAppointment = (appointment: RendezVous) => {
-    updateRendezVous(appointment.id, { statut: "confirmé" });
-    setAppointmentActionOpen(false);
-    toast.success("Rendez-vous confirmé");
-  };
-
-  const handleRejectAppointment = (appointmentId: string) => {
-    updateRendezVous(appointmentId, { statut: "annulé" });
-    setAppointmentActionOpen(false);
-    toast.success("Rendez-vous rejeté");
-  };
-
-  const handleArchiveToday = () => {
-    archiveByDate(todayStr);
-    toast.success("Journée archivée");
-  };
-
-  const handleNewPatientSubmit = (patientData: any) => {
-    const newPatient = addPatient(patientData);
-    
-    if (appointmentToConvert) {
-      updateRendezVous(appointmentToConvert.id, {
-        patientId: newPatient.id,
-        patientNom: `${newPatient.nom} ${newPatient.prenom}`,
-      });
+  const handleConfirmAppointment = async (appointment: RendezVous) => {
+    try {
+      await updateRendezVous(appointment.id, { statut: "confirmé" });
+      setAppointmentActionOpen(false);
+      toast.success("Rendez-vous confirmé");
+    } catch (error) {
+      console.error('Failed to confirm appointment:', error);
+      toast.error("Erreur lors de la confirmation");
     }
+  };
 
-    toast.success("Rendez-vous confirmé. Veuillez compléter le dossier du patient.");
-    setNewPatientOpen(false);
-    setAppointmentToConvert(null);
+  const handleRejectAppointment = async (appointmentId: string) => {
+    try {
+      await updateRendezVous(appointmentId, { statut: "annulé" });
+      setAppointmentActionOpen(false);
+      toast.success("Rendez-vous rejeté");
+    } catch (error) {
+      console.error('Failed to reject appointment:', error);
+      toast.error("Erreur lors du rejet");
+    }
+  };
+
+  const handleArchiveToday = async () => {
+    try {
+      await archiveByDate(todayStr);
+      toast.success("Journée archivée");
+    } catch (error) {
+      console.error('Failed to archive:', error);
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleNewPatientSubmit = async (patientData: any) => {
+    try {
+      const newPatient = await addPatient(patientData);
+      
+      if (appointmentToConvert) {
+        await updateRendezVous(appointmentToConvert.id, {
+          patientId: newPatient.id,
+          patientNom: `${newPatient.nom} ${newPatient.prenom}`,
+        });
+      }
+
+      toast.success("Rendez-vous confirmé. Veuillez compléter le dossier du patient.");
+      setNewPatientOpen(false);
+      setAppointmentToConvert(null);
+    } catch (error) {
+      console.error('Failed to create patient:', error);
+      toast.error("Erreur lors de la création du patient");
+    }
   };
 
   return (
@@ -196,12 +215,9 @@ function Index() {
                             Confirmé
                           </button>
                         ) : (
-                          <Badge
-                            variant="outline"
-                            className="border-destructive/30 bg-destructive/5 text-destructive font-normal"
-                          >
+                          <span className="px-3 py-1 rounded border border-destructive/30 bg-destructive/5 text-destructive text-sm font-normal">
                             Annulé
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </div>
@@ -242,34 +258,38 @@ function Index() {
                       </div>
                       <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                         <span className="text-sm font-semibold text-foreground tabular-nums">{passage.heure}</span>
-                        {passage.statut === "passé" ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-200 font-normal">Passé</Badge>
-                        ) : passage.statut === "annulé" ? (
-                          <Badge className="bg-red-100 text-red-700 border-red-200 font-normal">Annulé</Badge>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                updatePassageDirect(passage.id, { statut: "passé" });
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await deletePassageDirect(passage.id);
                                 toast.success("Marqué comme passé");
-                              }}
-                              className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-                              title="Marquer comme passé"
-                            >
-                              <CheckCircle2 className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                updatePassageDirect(passage.id, { statut: "annulé" });
+                              } catch (error) {
+                                console.error('Failed to complete passage:', error);
+                                toast.error("Erreur lors de la suppression");
+                              }
+                            }}
+                            className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                            title="Marquer comme passé et supprimer"
+                          >
+                            <CheckCircle2 className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await deletePassageDirect(passage.id);
                                 toast.success("Marqué comme annulé");
-                              }}
-                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Marquer comme annulé"
-                            >
-                              <XCircle className="h-5 w-5" />
-                            </button>
-                          </div>
-                        )}
+                              } catch (error) {
+                                console.error('Failed to cancel passage:', error);
+                                toast.error("Erreur lors de la suppression");
+                              }
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Marquer comme annulé et supprimer"
+                          >
+                            <XCircle className="h-5 w-5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -298,14 +318,30 @@ function Index() {
         open={newRdvOpen}
         onOpenChange={setNewRdvOpen}
         categories={categories}
-        onSubmit={addRendezVous}
+        onSubmit={async (rdvData) => {
+          try {
+            await addRendezVous(rdvData);
+            toast.success("Rendez-vous ajouté");
+          } catch (error) {
+            console.error('Failed to add rendez-vous:', error);
+            toast.error("Erreur lors de l'ajout");
+          }
+        }}
       />
 
       <NewPassageDirectModal
         open={newPassageOpen}
         onOpenChange={setNewPassageOpen}
         categories={categories}
-        onSubmit={addPassageDirect}
+        onSubmit={async (passageData) => {
+          try {
+            await addPassageDirect(passageData);
+            toast.success("Passage direct ajouté");
+          } catch (error) {
+            console.error('Failed to add passage direct:', error);
+            toast.error("Erreur lors de l'ajout");
+          }
+        }}
       />
 
       <AppointmentActionModal
